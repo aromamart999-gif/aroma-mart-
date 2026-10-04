@@ -1,0 +1,51 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      AMORA_HOST: "0.0.0.0"
+      AMORA_PORT: "4173"
+      AMORA_COOKIE_SECURE: "1"
+      AMORA_PUBLIC_URL: "${AMORA_PUBLIC_URL:?Set AMORA_PUBLIC_URL in .env}"
+    volumes:
+      - amora_data:/app/data
+      - amora_uploads:/app/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "4173"
+    networks:
+      - app_private
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      AMORA_DOMAIN: "${AMORA_DOMAIN:?Set AMORA_DOMAIN in .env}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app_private
+      - public_edge
+
+volumes:
+  amora_data:
+  amora_uploads:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app_private:
+    internal: true
+  public_edge:
